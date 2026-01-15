@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>動物園</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./style.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -41,11 +41,18 @@
                 <div class="lobby-box">
                     <h2>等待大廳 <span id="display-room-id"></span></h2>
                     <div id="player-list" class="player-list"></div>
-                    <div class="lobby-controls">
-                        <button id="ready-btn" class="btn-secondary" onclick="toggleReady()">準備</button>
-                        <button id="start-btn" class="btn-primary hidden" onclick="startGame()">開始遊戲</button>
+                    
+                    <div class="lobby-controls-container">
+                        
+                        <div class="lobby-row-actions">
+                            <button id="ready-btn" class="btn-secondary btn-action" onclick="toggleReady()">準備</button>
+                            <button id="start-btn" class="btn-primary btn-action hidden" onclick="startGame()">開始遊戲</button>
+                        </div>
+
+                        <button id="leave-lobby-btn" class="btn-red btn-wide" onclick="leaveRoom()">🚪 離開房間</button>
                     </div>
                 </div>
+
                 <div id="deck-settings" class="settings-box hidden">
                     <h3>🛠️ 牌堆數量設定</h3>
                     <div id="settings-grid" class="settings-grid"></div>
@@ -54,6 +61,10 @@
         </div>
 
         <div id="game-screen" class="screen hidden">
+            <div style="position: absolute; top: 10px; right: 10px; z-index: 100;">
+                <button class="btn-red" onclick="leaveRoom()" style="padding: 5px 15px; font-size: 0.8em; border-radius: 5px; width: auto; margin: 0;">🚪 離開</button>
+            </div>
+
             <div id="opponents-area" class="opponents-bar"></div>
             
             <div id="game-over-overlay" class="game-over-overlay hidden">
@@ -67,6 +78,12 @@
 
             <div class="battle-ground">
                 <div class="status-indicator" id="status-bar"></div>
+                <div id="room-info">
+                    <div id="discard-pile" class="hidden">
+                        <div class="pile-label">🗑️ 棄牌區</div>
+                        <div class="pile-cards"></div>
+                    </div>
+                </div>
                 <div class="table-zone">
                     <div id="table-cards" class="card-row"></div>
                     <div id="table-info" class="table-info"></div>

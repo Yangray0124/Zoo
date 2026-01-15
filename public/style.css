@@ -12,10 +12,9 @@ body {
     font-family: 'Noto Sans TC', sans-serif;
     background-color: #1e272e;
     color: var(--text-color);
-    overflow: hidden; /* 防止捲動 */
+    overflow: hidden;
 }
 
-/* 滿版容器 */
 .app-container {
     width: 100vw;
     height: 100vh;
@@ -28,7 +27,7 @@ body {
 
 .hidden { display: none !important; }
 
-/* --- 登入與大廳卡片 --- */
+/* --- 登入與大廳 --- */
 .screen {
     width: 100%;
     height: 100%;
@@ -67,7 +66,7 @@ input {
 }
 input:focus { background: rgba(0,0,0,0.5); border: 2px solid var(--table-color); }
 
-/* --- 按鈕樣式 --- */
+/* --- 按鈕 --- */
 button {
     padding: 12px 24px;
     border: none;
@@ -78,19 +77,43 @@ button {
     transition: transform 0.1s, filter 0.2s;
 }
 button:active { transform: scale(0.95); }
-.btn-primary { background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; width: 100%; }
-.btn-secondary { background: #7f8c8d; color: white; }
-.btn-action { width: 100px; margin: 0 10px; }
-.btn-action.play { background: linear-gradient(135deg, #e67e22, #f39c12); color: white; }
-.btn-action.pass { background: #c0392b; color: white; }
 button:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
 
-/* --- 玩家列表樣式優化 --- */
-.player-list {
-    width: 100%;
-    margin-bottom: 20px;
+.btn-primary { background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; width: 100%; }
+.btn-secondary {
+    background: #7f8c8d;
+    color: white;
+}
+.btn-action {
+    flex: 1;           /* 自動平分空間 */
+    width: 100%;       /* 試圖佔滿 */
+    margin: 0;
+    padding: 12px 20px;
+    white-space: nowrap;
+}
+.btn-full {
+    width: 100% !important; /* 強制 100% */
+    flex: none !important;  /* 取消彈性伸縮，直接霸佔 */
+}
+.btn-action.play { background: linear-gradient(135deg, #e67e22, #f39c12); color: white; }
+.btn-action.pass { background: #c0392b; color: white; }
+
+/* 紅色按鈕樣式 */
+.btn-red {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    transition: background 0.3s;
+}
+.btn-red:hover { background-color: #c0392b; }
+.btn-wide {
+    width: 90%;
+    padding: 12px;
+    margin-top: 5px;
 }
 
+/* --- 玩家列表 --- */
+.player-list { width: 100%; margin-bottom: 20px; }
 .player-item-row {
     padding: 12px;
     border-radius: 8px;
@@ -101,230 +124,158 @@ button:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
     transition: all 0.3s ease;
     border: 1px solid transparent;
 }
-
-/* 狀態：已準備 (綠色底，明顯亮眼) */
 .player-ready {
     background: rgba(39, 174, 96, 0.8);
     border-color: #2ecc71;
     box-shadow: 0 0 10px rgba(46, 204, 113, 0.4);
 }
-
-/* 狀態：還沒準備 (灰色/暗色底，虛線邊框) */
 .player-waiting {
     background: rgba(0, 0, 0, 0.4);
     border-color: #7f8c8d;
     border-style: dashed;
     opacity: 0.8;
 }
-
-.row-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-/* 踢人按鈕 (紅色小按鈕) */
+.row-right { display: flex; align-items: center; gap: 10px; }
 .btn-kick {
     background: rgba(231, 76, 60, 0.2);
     border: 1px solid #c0392b;
     color: #e74c3c;
     border-radius: 5px;
-    width: 30px;
-    height: 30px;
-    padding: 0;
+    width: 30px; height: 30px; padding: 0;
     font-size: 1.2em;
     cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: all 0.2s;
+    display: flex; justify-content: center; align-items: center;
 }
+.btn-kick:hover { background: #c0392b; color: white; transform: scale(1.1); }
 
-.btn-kick:hover {
-    background: #c0392b;
-    color: white;
-    transform: scale(1.1);
-}
-
-/* --- 遊戲畫面佈局 --- */
-#game-screen {
-    justify-content: space-between;
-    padding: 20px 0;
-}
-
-/* 上方對手區 */
+/* --- 遊戲畫面 --- */
+#game-screen { justify-content: space-between; padding: 20px 0; }
 .opponents-bar {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    padding: 10px;
-    width: 100%;
-    min-height: 110px; /* 確保最小高度，避免塌陷 */
-    overflow-x: auto;
-    background: rgba(0,0,0,0.2);
-    border-radius: 10px;
+    display: flex; justify-content: center; gap: 15px; padding: 10px;
+    width: 100%; min-height: 110px;
+    overflow-x: auto; background: rgba(0,0,0,0.2); border-radius: 10px;
 }
-
 .opponent-card {
-    background: rgba(0,0,0,0.5);
-    border: 1px solid #7f8c8d;
-    border-radius: 10px;
-    padding: 10px;
-    width: 80px;
-    height: 90px;
-    text-align: center;
-    position: relative;
-    transition: all 0.3s;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    background: rgba(0,0,0,0.5); border: 1px solid #7f8c8d; border-radius: 10px;
+    padding: 10px; width: 80px; height: 90px;
+    text-align: center; position: relative;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
 }
-
 .opponent-active {
-    border-color: #f1c40f;
-    box-shadow: 0 0 10px #f1c40f;
-    transform: scale(1.05);
+    border-color: #f1c40f; box-shadow: 0 0 10px #f1c40f; transform: scale(1.05);
     background: rgba(241, 196, 15, 0.2);
 }
-
 .opponent-card .avatar { font-size: 1.5em; margin-bottom: 5px; }
 .opponent-card .name { font-size: 0.8em; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
 .opponent-card .card-count { font-size: 1em; color: #3498db; }
-.opponent-card .badge { 
-    position: absolute; top: -5px; right: -5px; 
-    background: #e74c3c; font-size: 0.7em; padding: 2px 5px; border-radius: 5px; 
-}
+.opponent-card .badge { position: absolute; top: -5px; right: -5px; background: #e74c3c; font-size: 0.7em; padding: 2px 5px; border-radius: 5px; }
 
-/* 中央戰場 */
+/* 戰場 */
 .battle-ground {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
+    flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%;
 }
 .status-indicator {
-    margin-bottom: 20px;
-    font-size: 1.5em;
-    color: var(--highlight);
-    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-    background: rgba(0,0,0,0.6);
-    padding: 5px 20px;
-    border-radius: 50px;
+    margin-bottom: 20px; font-size: 1.5em; color: var(--highlight);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8); background: rgba(0,0,0,0.6); padding: 5px 20px; border-radius: 50px;
 }
 .table-zone {
-    width: 90%;
-    max-width: 600px;
-    min-height: 180px;
-    background: rgba(255,255,255,0.05);
-    border: 2px dashed rgba(255,255,255,0.2);
+    width: 90%; max-width: 600px; min-height: 180px;
+    background: rgba(255,255,255,0.05); border: 2px dashed rgba(255,255,255,0.2);
     border-radius: 20px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
     position: relative;
 }
-.table-info {
-    position: absolute;
-    bottom: -30px;
-    color: #bdc3c7;
-    font-size: 0.9em;
+.table-info { position: absolute; bottom: -30px; color: #bdc3c7; font-size: 0.9em; }
+
+/* 棄牌堆樣式 */
+#discard-pile {
+    position: absolute; right: 20px; top: 120px;
+    width: 80px; height: 110px;
+    border: 2px dashed rgba(255, 255, 255, 0.3); border-radius: 8px;
+    display: flex; justify-content: center; align-items: center; flex-direction: column;
+}
+.pile-label { font-size: 12px; color: #aaa; margin-bottom: 5px; }
+.card-back {
+    width: 60px; height: 84px; background: #34495e;
+    border: 2px solid #fff; border-radius: 5px;
+    position: absolute; box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
 }
 
-/* 下方玩家區 */
+/* 玩家區 */
 .player-zone {
-    width: 100%;
-    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-    padding: 10px 0 20px 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    width: 100%; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+    padding: 10px 0 20px 0; display: flex; flex-direction: column; align-items: center;
 }
 .controls { margin-bottom: 10px; }
 
-/* --- 卡牌通用樣式 --- */
-.card-row {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 5px; /* 卡片間距 */
+/* --- 卡牌 --- */
+.card-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 5px; }
+.card {
+    width: 70px; height: 100px; background: white; border-radius: 8px;
+    border: 1px solid #bdc3c7; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    cursor: pointer; user-select: none; position: relative; color: #2c3e50;
+    transition: transform 0.2s, z-index 0s; 
+}
+.hand-cards .card { margin-left: -20px; }
+
+/* Hover 時圖層置頂 */
+.hand-cards .card:hover { 
+    transform: translateY(-25px) scale(1.1) rotate(0deg); 
+    z-index: 500 !important; 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.7); 
 }
 
-.card {
-    width: 70px;
-    height: 100px;
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #bdc3c7;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s;
-    position: relative;
-    color: #2c3e50;
-}
-.hand-cards .card {
-    margin-left: -20px; /* 手牌重疊效果 */
-}
-.hand-cards .card:hover {
-    transform: translateY(-20px) rotate(2deg);
-    z-index: 10;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-}
 .hand-cards .card.selected {
     transform: translateY(-30px) !important;
-    border: 3px solid var(--accent);
-    background-color: #ffeaa7;
-    z-index: 100;
+    border: 3px solid var(--accent); background-color: #ffeaa7;
+    z-index: 400;
     box-shadow: 0 0 15px var(--accent);
 }
-.active-hand {
-    background: rgba(39, 174, 96, 0.2);
-    border-radius: 20px 20px 0 0;
-}
+.active-hand { background: rgba(39, 174, 96, 0.2); border-radius: 20px 20px 0 0; }
 
-.card .emoji { font-size: 2.5em; line-height: 1; }
+/* [修改] 這裡改為 2em */
+.card .emoji { font-size: 2em; line-height: 1; }
 .card .name { font-size: 0.7em; font-weight: bold; margin-top: 5px; }
 
-/* 北極熊圖片修正 */
-.emoji-img {
-    width: 2.5em;
-    height: 2.5em;
+/* [修改] 這裡改為 2em，跟文字版統一 */
+.emoji-img { 
+    width: 2em; 
+    height: 2em; 
+    margin-bottom: 5px; 
+    pointer-events: none; 
+    object-fit: contain; 
     vertical-align: middle;
-    pointer-events: none;
-}
-.card .emoji-img {
-    width: 40px;
-    height: 40px;
-    margin-bottom: 5px;
 }
 
-.empty-msg { color: rgba(255,255,255,0.3); font-style: italic; }
+/* --- 動畫 --- */
+@keyframes popIn {
+    0% { transform: scale(0.5) translateY(50px); opacity: 0; }
+    80% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+.card.animate-enter { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
 
-/* --- Toast Notification --- */
+@keyframes flyToTrash {
+    0% { transform: scale(1) rotate(0deg); opacity: 1; }
+    100% { transform: translate(200px, -200px) scale(0.5) rotate(720deg); opacity: 0; }
+}
+.card.animate-leave { animation: flyToTrash 0.6s ease-in forwards; }
+
+@keyframes pulse-yellow {
+    0% { box-shadow: 0 0 5px #f1c40f; }
+    50% { box-shadow: 0 0 20px #f1c40f, 0 0 10px #f39c12; }
+    100% { box-shadow: 0 0 5px #f1c40f; }
+}
+.card.playable { border: 2px solid #f1c40f !important; animation: pulse-yellow 1.5s infinite; z-index: 50; }
+
+/* --- Toast --- */
 .toast {
-    position: fixed;
-    top: 20%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0,0,0,0.85);
-    color: white;
-    padding: 15px 30px;
-    border-radius: 50px;
-    z-index: 1000;
-    font-size: 1.2em;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    border: 1px solid var(--highlight);
-    animation: fadeInOut 3s forwards;
+    position: fixed; top: 20%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.85); color: white; padding: 15px 30px;
+    border-radius: 50px; z-index: 1000; font-size: 1.2em;
+    border: 1px solid var(--highlight); animation: fadeInOut 3s forwards;
 }
-
 @keyframes fadeInOut {
     0% { opacity: 0; transform: translate(-50%, -40%); }
     10% { opacity: 1; transform: translate(-50%, -50%); }
@@ -332,176 +283,70 @@ button:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
     100% { opacity: 0; transform: translate(-50%, -60%); visibility: hidden; }
 }
 
-/* 設定面板 (Grid Layout) */
+/* --- 設定面板 --- */
 .settings-box {
-    margin-left: 20px;
-    background: rgba(0, 0, 0, 0.85); /* 背景稍微深一點 */
-    padding: 25px; /* 增加一點內距 */
-    border-radius: 15px;
-    
-    /* [修改] 寬度加寬，高度放寬 */
-    max-width: 650px;  /* 原本是 300px -> 改為 650px */
-    max-height: 80vh;  /* 高度設為視窗的 80%，通常夠用 */
-    width: max-content; /* 讓寬度隨著內容自動撐開 */
-    
-    overflow-y: auto; /* 保留滾動條以防萬一 (例如手機版)，但平時不會出現 */
-    z-index: 50;
-    position: relative;
-    border: 1px solid rgba(255,255,255,0.2);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5); /* 加強陰影讓它浮起來 */
+    background: rgba(0, 0, 0, 0.85); padding: 25px; border-radius: 15px;
+    max-width: 650px; max-height: 80vh; width: max-content;
+    overflow-y: auto; z-index: 50; position: relative;
+    border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
-
-.settings-grid {
-    display: grid;
-    /* [修改] 改成 4 欄 (原本是 2 欄 1fr 1fr) */
-    grid-template-columns: repeat(4, 1fr); 
-    gap: 15px; /* 增加間距讓畫面不擁擠 */
-    margin-top: 15px;
-}
-
-/* 為了讓 4 欄排起來好看，稍微調整每個項目的內距 */
+.settings-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 15px; }
 .setting-item { 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    background: rgba(255,255,255,0.08); 
-    padding: 10px; /* 增加內距 */
-    border-radius: 8px; 
+    display: flex; flex-direction: column; align-items: center; 
+    background: rgba(255,255,255,0.08); padding: 10px; border-radius: 8px; 
 }
-/* 大廳佈局修正 */
-.lobby-layout {
+.setting-item input:disabled {
+    background: transparent; border: none; color: #f1c40f; font-weight: bold;
+    text-align: center; cursor: default; padding: 0; margin-top: 8px; opacity: 1;
+    -webkit-text-fill-color: #f1c40f;
+}
+.setting-hint {
+    grid-column: 1 / -1; text-align: center; color: #e74c3c; font-size: 0.9em;
+    margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; font-weight: bold;
+}
+
+/* --- 其他 --- */
+.lobby-layout { display: flex; justify-content: center; align-items: flex-start; flex-wrap: wrap; gap: 20px; }
+.lobby-controls-container {
+    margin-top: 20px;
+    width: 100%;
     display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 20px;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
 }
-.lobby-controls {
+.lobby-row-actions {
     display: flex;
     justify-content: center;
     gap: 15px;
-    margin-top: 20px;
+    width: 90%; /* 跟下面的離開按鈕一樣寬 */
 }
+.btn-ready { background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; }
+.btn-cancel { background: linear-gradient(135deg, #c0392b, #e74c3c); color: white; }
 
-/* 準備/取消按鈕 */
-.btn-ready { 
-    background: linear-gradient(135deg, #27ae60, #2ecc71); 
-    color: white; 
-    border: none;
-    box-shadow: 0 4px 0 #1e8449;
-    transition: all 0.1s;
-}
-.btn-ready:active { transform: translateY(4px); box-shadow: none; }
-
-.btn-cancel { 
-    background: linear-gradient(135deg, #c0392b, #e74c3c); 
-    color: white; 
-    border: none;
-    box-shadow: 0 4px 0 #96281b;
-    transition: all 0.1s;
-}
-.btn-cancel:active { transform: translateY(4px); box-shadow: none; }
-
-/* 房間列表樣式 */
-.room-list-container {
-    margin-top: 20px;
-    width: 100%;
-    border-top: 1px solid rgba(255,255,255,0.2);
-    padding-top: 15px;
-}
-.room-list-container h3 { font-size: 1em; color: #bdc3c7; margin-bottom: 10px; }
-
-.room-list {
-    max-height: 150px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
+.room-list-container { margin-top: 20px; width: 100%; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px; }
+.room-list { max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .room-item {
-    background: rgba(0,0,0,0.3);
-    padding: 10px;
-    border-radius: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    transition: background 0.2s;
-    border: 1px solid transparent;
+    background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;
+    display: flex; justify-content: space-between; align-items: center; cursor: pointer;
 }
-.room-item:hover {
-    background: rgba(255,255,255,0.1);
-    border-color: #f1c40f;
-}
-
-.room-status { font-size: 0.8em; padding: 2px 6px; border-radius: 4px; }
-.status-waiting { background: #27ae60; color: white; }
-.status-playing { background: #c0392b; color: white; }
-
+.room-item:hover { background: rgba(255,255,255,0.1); border-color: #f1c40f; }
+.status-waiting { background: #27ae60; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+.status-playing { background: #c0392b; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
 .empty-room-msg { color: #7f8c8d; font-style: italic; font-size: 0.9em; }
 
-/* 遊戲結算畫面 (Overlay) */
 .game-over-overlay {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0,0,0,0.85);
-    z-index: 2000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    backdrop-filter: blur(5px);
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); z-index: 2000;
+    display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);
 }
-
 .result-box {
-    background: rgba(44, 62, 80, 0.9);
-    border: 2px solid #f1c40f;
-    padding: 30px;
-    border-radius: 20px;
-    text-align: center;
-    width: 300px;
-    box-shadow: 0 0 20px rgba(241, 196, 15, 0.5);
+    background: rgba(44, 62, 80, 0.9); border: 2px solid #f1c40f; padding: 30px;
+    border-radius: 20px; text-align: center; width: 300px; box-shadow: 0 0 20px rgba(241, 196, 15, 0.5);
 }
-
-.result-list {
-    margin: 20px 0;
-    text-align: left;
-}
-
 .result-item {
-    background: rgba(255,255,255,0.1);
-    padding: 10px;
-    margin-bottom: 5px;
-    border-radius: 5px;
-    display: flex;
-    justify-content: space-between;
-    font-size: 1.2em;
+    background: rgba(255,255,255,0.1); padding: 10px; margin-bottom: 5px;
+    border-radius: 5px; display: flex; justify-content: space-between; font-size: 1.2em;
 }
-
-#waiting-host-msg {
-    color: #bdc3c7;
-    font-style: italic;
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0% { opacity: 0.5; }
-    50% { opacity: 1; }
-    100% { opacity: 0.5; }
-}
-
-/* --- [修正] 可出牌提示 (黃色光暈，不改變位置) --- */
-@keyframes pulse-yellow {
-    0% { box-shadow: 0 0 5px #f1c40f; }
-    50% { box-shadow: 0 0 20px #f1c40f, 0 0 10px #f39c12; }
-    100% { box-shadow: 0 0 5px #f1c40f; }
-}
-
-.card.playable {
-    border: 2px solid #f1c40f !important;
-    /* [修改] 移除 translateY，只保留呼吸燈與邊框 */
-    /* transform: translateY(-10px); */
-    animation: pulse-yellow 1.5s infinite;
-    z-index: 50; /* 確保邊框不會被遮住 */
-}
+#waiting-host-msg { color: #bdc3c7; font-style: italic; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }

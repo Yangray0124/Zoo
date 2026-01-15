@@ -6,24 +6,23 @@ let selectedCards = [];
 let currentHand = [];
 let isHost = false;
 
-// 暫存遊戲狀態，用於補亮手牌
 let currentTableInfo = null;
 let currentTurnPlayer = '';
 
 const ANIMAL_META = {
-    MOSQUITO: {name:'蚊子', emoji:'🦟'},
-    MOUSE: {name:'老鼠', emoji:'🐭'},
-    HEDGEHOG: {name:'刺蝟', emoji:'🦔'},
-    FOX: {name:'狐狸', emoji:'🦊'},
-    LION: {name:'獅子', emoji:'🦁'},
-    ELEPHANT: {name:'大象', emoji:'🐘'},
-    CHAMELEON: {name:'變色龍', emoji:'🦎'},
-    SMALL_FISH: {name:'小魚', emoji:'🐟'},
-    BIG_FISH: {name:'大魚', emoji:'🐠'},
-    SEAL: {name:'海豹', emoji:'🦦'},
-    BEAR: {name:'北極熊', emoji:'🐻‍❄️'},
-    CROCODILE: {name:'鱷魚', emoji:'🐊'}, 
-    WHALE: {name:'鯨魚', emoji:'🐋'}
+    MOSQUITO: {name:'蚊子', emoji:'🦟', color: '#95a5a6'}, 
+    MOUSE: {name:'老鼠', emoji:'🐭', color: '#bdc3c7'}, 
+    HEDGEHOG: {name:'刺蝟', emoji:'🦔', color: '#d35400'}, 
+    FOX: {name:'狐狸', emoji:'🦊', color: '#e67e22'}, 
+    LION: {name:'獅子', emoji:'🦁', color: '#f1c40f'}, 
+    ELEPHANT: {name:'大象', emoji:'🐘', color: '#95a5a6'}, 
+    CHAMELEON: {name:'變色龍', emoji:'🦎', color: '#2ecc71'}, 
+    SMALL_FISH: {name:'小魚', emoji:'🐟', color: '#3498db'}, 
+    BIG_FISH: {name:'大魚', emoji:'🐠', color: '#2980b9'}, 
+    SEAL: {name:'海豹', emoji:'🦦', color: '#8e44ad'}, 
+    BEAR: {name:'北極熊', emoji:'🐻‍❄️', color: '#ecf0f1'}, // 雖然這裡有 emoji，但下面的函式會用圖片覆蓋它
+    CROCODILE: {name:'鱷魚', emoji:'🐊', color: '#27ae60'}, 
+    WHALE: {name:'鯨魚', emoji:'🐋', color: '#34495e'} 
 };
 
 const PREDATOR_PREY_MAP = {
@@ -31,14 +30,14 @@ const PREDATOR_PREY_MAP = {
     'ELEPHANT':  ['LION', 'BEAR', 'CROCODILE', 'FOX'],
     'LION':      ['FOX', 'MOUSE'],
     'BEAR':      ['FOX', 'SEAL', 'BIG_FISH', 'MOUSE'],
-    'CROCODILE': ['FOX', 'BIG_FISH', 'SMALL_FISH', 'HEDGEHOG', 'MOUSE', 'MOSQUITO'],
+    'CROCODILE': ['FOX', 'BIG_FISH', 'SMALL_FISH', 'MOUSE', 'MOSQUITO'],
     'FOX':       ['HEDGEHOG', 'MOUSE'],
     'SEAL':      ['BIG_FISH', 'SMALL_FISH', 'MOUSE'],
     'BIG_FISH':  ['SMALL_FISH'],
     'SMALL_FISH':['MOSQUITO'],
     'HEDGEHOG':  ['MOUSE', 'MOSQUITO'],
     'MOUSE':     ['ELEPHANT', 'MOSQUITO'],
-    'MOSQUITO':  [], 
+    'MOSQUITO':  ['ELEPHANT'], 
     'CHAMELEON': []
 };
 
@@ -47,8 +46,10 @@ const SORT_ORDER = [
     'CHAMELEON', 'SMALL_FISH', 'BIG_FISH', 'SEAL', 'BEAR', 'CROCODILE', 'WHALE'
 ];
 
+// [修正] 北極熊圖片網址
 const POLAR_BEAR_URL = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f43b-200d-2744-fe0f.svg";
 
+// [修正] 如果是熊，回傳圖片；否則回傳 emoji
 function getCardContent(type, emojiChar) {
     if (type === 'BEAR') {
         return `<img src="${POLAR_BEAR_URL}" class="emoji-img" alt="北極熊">`;
@@ -117,6 +118,12 @@ function joinRoom(roomCode) {
     socket.emit('join_room', { roomId: room, username: username, nickname: nickname });
 }
 
+window.leaveRoom = function() {
+    if (confirm("確定要離開房間嗎？")) {
+        socket.emit('leave_room', myRoomId);
+    }
+}
+
 function toggleReady() { socket.emit('player_ready', myRoomId); }
 
 function startGame() {
@@ -155,6 +162,15 @@ socket.on('room_list_update', (rooms) => {
     `).join('');
 });
 
+socket.on('left_room_success', () => {
+    myRoomId = '';
+    isHost = false;
+    currentHand = [];
+    selectedCards = [];
+    currentTableInfo = null;
+    location.reload(); 
+});
+
 socket.on('game_reset', () => {
     document.getElementById('game-over-overlay').classList.add('hidden');
     switchScreen('lobby-screen');
@@ -172,11 +188,15 @@ socket.on('update_room', (data) => {
     const list = document.getElementById('player-list');
     const amIHost = data.players[0].id === myId;
 
-    list.innerHTML = data.players.map(p => {
+    // [新增] 房主皇冠邏輯：判斷 index === 0
+    list.innerHTML = data.players.map((p, index) => {
         const isMe = p.id === myId ? '(我)' : '';
         const statusIcon = p.isReady ? '✅ 準備完成' : '⏳ 等待中...';
         const rowClass = p.isReady ? 'player-ready' : 'player-waiting';
         
+        // 只有第一位玩家(房主)顯示皇冠
+        const hostBadge = (index === 0) ? ' 👑' : '';
+
         let kickBtn = '';
         if (amIHost && p.id !== myId) {
             kickBtn = `<button class="btn-kick" onclick="kickPlayer('${p.id}')" title="踢出此人">🚫</button>`;
@@ -184,7 +204,7 @@ socket.on('update_room', (data) => {
 
         return `
             <div class="player-item-row ${rowClass}">
-                <span style="font-weight:bold;">${p.name} ${isMe}</span>
+                <span style="font-weight:bold;">${p.name}${hostBadge} ${isMe}</span>
                 <div class="row-right">
                     <span style="font-size:0.9em;">${statusIcon}</span>
                     ${kickBtn}
@@ -193,60 +213,108 @@ socket.on('update_room', (data) => {
         `;
     }).join('');
 
+    // --- 按鈕邏輯區 ---
     isHost = data.players[0].id === myId;
     const startBtn = document.getElementById('start-btn');
+    const readyBtn = document.getElementById('ready-btn'); // 抓取準備按鈕
     const settingsBox = document.getElementById('deck-settings');
     
-    if(isHost && data.status === 'WAITING') {
-        startBtn.classList.remove('hidden');
+    if (data.status === 'WAITING') {
         settingsBox.classList.remove('hidden');
-        const grid = document.getElementById('settings-grid');
-        if (grid && grid.children.length === 0) renderSettings(data.config);
+        renderSettings(data.config, isHost);
 
-        const others = data.players.filter(p => p.id !== myId);
-        const allOthersReady = others.length > 0 && others.every(p => p.isReady);
+        if (isHost) {
+            // --- 我是房主 ---
+            startBtn.classList.remove('hidden'); // 顯示開始按鈕
+            
+            // [關鍵] 移除滿版樣式，讓它跟開始按鈕平分寬度
+            readyBtn.classList.remove('btn-full'); 
 
-        if (allOthersReady) {
-            startBtn.disabled = false;
-            startBtn.innerText = "開始遊戲";
-            startBtn.style.opacity = "1";
-            startBtn.style.cursor = "pointer";
+            // 檢查是否所有人都準備好
+            const others = data.players.filter(p => p.id !== myId);
+            const allOthersReady = others.length > 0 && others.every(p => p.isReady);
+
+            if (allOthersReady) {
+                startBtn.disabled = false;
+                startBtn.innerText = "開始遊戲";
+                startBtn.style.opacity = "1";
+                startBtn.style.cursor = "pointer";
+            } else {
+                startBtn.disabled = true;
+                if (others.length === 0) startBtn.innerText = "等待玩家加入...";
+                else startBtn.innerText = "等待全員準備...";
+                startBtn.style.opacity = "0.5";
+                startBtn.style.cursor = "not-allowed";
+            }
         } else {
-            startBtn.disabled = true;
-            if (others.length === 0) startBtn.innerText = "等待玩家加入...";
-            else startBtn.innerText = "等待全員準備...";
-            startBtn.style.opacity = "0.5";
-            startBtn.style.cursor = "not-allowed";
+            // --- 我不是房主 ---
+            startBtn.classList.add('hidden'); // 隱藏開始按鈕
+            
+            // [關鍵] 加入滿版樣式，讓準備按鈕變超寬
+            readyBtn.classList.add('btn-full'); 
         }
     } else {
+        // 遊戲中
         startBtn.classList.add('hidden');
         settingsBox.classList.add('hidden');
+        
+        // 處理遊戲結束後的返回大廳按鈕
+        if (data.status === 'FINISHED') {
+            const backBtn = document.getElementById('back-lobby-btn');
+            const waitMsg = document.getElementById('waiting-host-msg');
+            
+            if (isHost) {
+                backBtn.classList.remove('hidden');
+                waitMsg.classList.add('hidden');
+            } else {
+                backBtn.classList.add('hidden');
+                waitMsg.classList.remove('hidden');
+            }
+        }
     }
 
+    // 更新準備按鈕文字
     const me = data.players.find(p => p.id === myId);
     if(me) {
-        const btn = document.getElementById('ready-btn');
         if (me.isReady) {
-            btn.innerText = "取消準備";
-            btn.className = "btn-cancel";
+            readyBtn.innerText = "取消準備";
+            readyBtn.className = isHost ? "btn-cancel btn-action" : "btn-cancel btn-action btn-full";
         } else {
-            btn.innerText = "準備";
-            btn.className = "btn-ready";
+            readyBtn.innerText = "準備";
+            readyBtn.className = isHost ? "btn-ready btn-action" : "btn-ready btn-action btn-full";
         }
     }
 });
 
-function renderSettings(config) {
+function renderSettings(config, amIHost) {
     const grid = document.getElementById('settings-grid');
-    grid.innerHTML = Object.keys(ANIMAL_META).map(type => {
+    const disabledAttr = amIHost ? '' : 'disabled';
+    const onChangeAttr = amIHost ? 'onchange="sendSettings()"' : '';
+
+    let html = Object.keys(ANIMAL_META).map(type => {
         const count = config && config[type] !== undefined ? config[type] : 5;
         return `
             <div class="setting-item">
-                <label>${ANIMAL_META[type].emoji} ${ANIMAL_META[type].name}</label>
-                <input type="number" id="setting-${type}" value="${count}" min="0" max="20">
+                <label>${getCardContent(type, ANIMAL_META[type].emoji)} ${ANIMAL_META[type].name}</label>
+                <input type="number" id="setting-${type}" value="${count}" min="0" max="20" ${disabledAttr} ${onChangeAttr}>
             </div>
         `;
     }).join('');
+
+    if (!amIHost) {
+        html += `<div class="setting-hint">⚠️ 只有房主可以調整牌堆數量</div>`;
+    }
+
+    grid.innerHTML = html;
+}
+
+window.sendSettings = function() {
+    const config = {};
+    for (const type in ANIMAL_META) {
+        const el = document.getElementById(`setting-${type}`);
+        if(el) config[type] = parseInt(el.value) || 0;
+    }
+    socket.emit('update_settings', { roomId: myRoomId, config: config });
 }
 
 socket.on('game_started', (data) => {
@@ -266,24 +334,12 @@ socket.on('game_update', (data) => {
         switchScreen('game-screen');
     }
 
-    // 更新全域狀態
     currentTableInfo = data.tableCards;
     currentTurnPlayer = data.currentPlayer;
 
     renderOpponents(data.playersInfo || [], data.currentPlayer);
 
-    const tableDiv = document.getElementById('table-cards');
-    const tableInfo = document.getElementById('table-info');
-    
-    if (data.tableCards) {
-        tableDiv.innerHTML = data.tableCards.cards.map(c => 
-            `<div class="card">${getCardContent(c.type, c.emoji)}</div>`
-        ).join('');
-        tableInfo.innerText = `桌面: ${data.tableCards.count} 張 (${data.tableCards.emoji})`;
-    } else {
-        tableDiv.innerHTML = '<div class="empty-msg">等待出牌...</div>';
-        tableInfo.innerText = '';
-    }
+    renderTable(data.tableCards);
 
     updateTurnInfo(data.currentPlayer);
 
@@ -315,14 +371,11 @@ socket.on('game_update', (data) => {
         }
     }
 
-    // 觸發高亮檢查
     applyHighlights();
 });
 
 socket.on('toast', (msg) => showToast(msg));
 socket.on('error_message', (msg) => showToast("❌ " + msg));
-
-// --- 渲染與操作 ---
 
 function renderOpponents(players, currentTurnId) {
     const area = document.getElementById('opponents-area');
@@ -367,59 +420,188 @@ function updateTurnInfo(currentId) {
     }
 }
 
-// [修改] 高亮邏輯：移除變色龍自動提示
 function applyHighlights() {
     document.querySelectorAll('.card').forEach(el => el.classList.remove('playable'));
 
     if (currentTurnPlayer !== myId || currentHand.length === 0) return;
 
-    currentHand.forEach(card => {
-        let isPlayable = false;
+    const counts = {};
+    let chameleonCount = 0;
+    let mosquitoCount = 0;
 
-        if (!currentTableInfo) {
-            // 桌面無牌：任意牌都提示
-            isPlayable = true;
-        } else {
-            const targetType = currentTableInfo.type;
-            
-            // 判斷 1: 天敵
-            const preyList = PREDATOR_PREY_MAP[card.type];
-            const isPredator = preyList && preyList.includes(targetType);
+    currentHand.forEach(c => {
+        if (c.type === 'CHAMELEON') chameleonCount++;
+        else if (c.type === 'MOSQUITO') mosquitoCount++;
+        else counts[c.type] = (counts[c.type] || 0) + 1;
+    });
 
-            // 判斷 2: 同類
-            const isSameType = (card.type === targetType);
+    const playableTypes = new Set();
+    let isChameleonPlayable = false;
+    let isMosquitoPlayable = false;
 
-            // 判斷 3: 蚊子吃大象
-            const isMosquitoVsElephant = (card.type === 'MOSQUITO' && targetType === 'ELEPHANT');
-            
-            // [修正] 移除變色龍自動提示 (因為變色龍不能單出，亂亮會誤導)
-            // const isChameleon = (card.type === 'CHAMELEON');
+    if (!currentTableInfo) {
+        const hasNormalAnimal = Object.keys(counts).length > 0;
+        if (hasNormalAnimal) {
+            Object.keys(counts).forEach(t => playableTypes.add(t));
+            isChameleonPlayable = true;
+        }
+        if (mosquitoCount > 0) isMosquitoPlayable = true;
+        if (counts['ELEPHANT']) isMosquitoPlayable = true;
 
-            if (isPredator || isSameType || isMosquitoVsElephant) {
-                isPlayable = true;
-            }
+    } else {
+        const targetType = currentTableInfo.type;
+        const targetCount = currentTableInfo.count;
+
+        if (targetType === 'ELEPHANT' && mosquitoCount >= targetCount) {
+            isMosquitoPlayable = true;
         }
 
-        if (isPlayable) {
+        Object.keys(counts).forEach(myType => {
+            const myRealCount = counts[myType];
+            const powerWithChameleon = myRealCount + chameleonCount;
+            
+            let powerWithMosquito = 0;
+            if (myType === 'ELEPHANT') {
+                const totalHosts = myRealCount + chameleonCount;
+                const usableMosquitoes = Math.min(mosquitoCount, totalHosts);
+                powerWithMosquito = totalHosts + usableMosquitoes;
+            }
+
+            const preyList = PREDATOR_PREY_MAP[myType] || [];
+            const isPredator = preyList.includes(targetType);
+            const isSame = (myType === targetType);
+
+            let winWithChameleon = false;
+            if (isPredator && powerWithChameleon >= targetCount) winWithChameleon = true;
+            if (isSame && powerWithChameleon >= targetCount + 1) winWithChameleon = true;
+
+            if (winWithChameleon) {
+                playableTypes.add(myType);
+                isChameleonPlayable = true;
+            }
+
+            if (myType === 'ELEPHANT') {
+                let winWithMosquito = false;
+                if (isPredator && powerWithMosquito >= targetCount) winWithMosquito = true;
+                if (isSame && powerWithMosquito >= targetCount + 1) winWithMosquito = true;
+
+                if (winWithMosquito) {
+                    playableTypes.add(myType);
+                    isMosquitoPlayable = true;
+                    if (chameleonCount > 0) isChameleonPlayable = true;
+                }
+            }
+        });
+    }
+
+    currentHand.forEach(card => {
+        let highlight = false;
+        if (card.type === 'CHAMELEON') {
+            if (isChameleonPlayable) highlight = true;
+        } else if (card.type === 'MOSQUITO') {
+            if (isMosquitoPlayable) highlight = true;
+        } else {
+            if (playableTypes.has(card.type)) highlight = true;
+        }
+
+        if (highlight) {
             const el = document.getElementById('card-' + card.id);
             if (el) el.classList.add('playable');
         }
     });
 }
 
-function renderHand() {
-    const handDiv = document.getElementById('my-hand');
+let lastTableSignature = ""; 
+
+function renderTable(tableInfo) {
+    const tableDiv = document.getElementById('table-cards');
+    const discardPile = document.getElementById('discard-pile');
+    const discardContainer = discardPile.querySelector('.pile-cards');
+
+    const currentSignature = tableInfo ? `${tableInfo.type}-${tableInfo.count}` : "EMPTY";
+
+    if (currentSignature === lastTableSignature) return;
+
+    if (lastTableSignature !== "EMPTY" && currentSignature === "EMPTY") {
+        const oldCards = tableDiv.querySelectorAll('.card');
+        oldCards.forEach((card, index) => {
+            setTimeout(() => {
+                card.classList.add('animate-leave');
+            }, index * 50);
+        });
+
+        setTimeout(() => {
+            tableDiv.innerHTML = '';
+            const cardBack = document.createElement('div');
+            cardBack.className = 'card-back';
+            cardBack.style.transform = `rotate(${Math.random() * 20 - 10}deg)`;
+            discardContainer.appendChild(cardBack);
+            
+            while (discardContainer.children.length > 5) {
+                discardContainer.removeChild(discardContainer.firstChild);
+            }
+        }, 600);
+    } 
+    else if (tableInfo) {
+        tableDiv.innerHTML = '';
+        discardPile.classList.remove('hidden');
+
+        const tableInfoDiv = document.getElementById('table-info');
+        tableInfoDiv.innerText = `桌面: ${tableInfo.count} 張 (${tableInfo.emoji})`;
+
+        for (let i = 0; i < tableInfo.count; i++) {
+            const card = createCardElement({ type: tableInfo.type, id: `table-${i}` });
+            card.classList.add('animate-enter');
+            card.style.animationDelay = `${i * 0.1}s`;
+            tableDiv.appendChild(card);
+        }
+    } else {
+        tableDiv.innerHTML = '<div class="empty-msg">等待出牌...</div>';
+        document.getElementById('table-info').innerText = '';
+    }
+
+    lastTableSignature = currentSignature;
+}
+
+function createCardElement(cardData) {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.id = 'card-' + cardData.id;
     
+    const meta = ANIMAL_META[cardData.type] || { emoji: '❓', name: cardData.type, color: '#bdc3c7' };
+    div.style.backgroundColor = meta.color;
+    
+    // [修正] 使用 getCardContent 確保北極熊使用圖片
+    const emojiContent = getCardContent(cardData.type, meta.emoji);
+
+    div.innerHTML = `
+        <div class="emoji">${emojiContent}</div>
+        <div class="name">${meta.name}</div>
+    `;
+    return div;
+}
+
+function renderHand() {
+    const container = document.getElementById('my-hand');
+    container.innerHTML = '';
+
     currentHand.sort((a, b) => {
         return SORT_ORDER.indexOf(a.type) - SORT_ORDER.indexOf(b.type);
     });
 
-    handDiv.innerHTML = currentHand.map(c => `
-        <div class="card" id="card-${c.id}" onclick="toggleSelect('${c.id}')">
-            ${getCardContent(c.type, c.emoji)}
-            <span class="name">${c.name}</span>
-        </div>
-    `).join('');
+    currentHand.forEach(card => {
+        const div = createCardElement(card);
+        
+        if (selectedCards.includes(card.id)) {
+            div.classList.add('selected');
+        }
+
+        div.onclick = () => {
+            toggleSelect(card.id);
+        };
+        
+        container.appendChild(div);
+    });
     
     applyHighlights();
 }

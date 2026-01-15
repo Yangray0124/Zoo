@@ -10,7 +10,7 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ==========================================
-// 1. 動物定義與參數
+// 1. 動物定義與參數 (保持不變)
 // ==========================================
 
 const ANIMALS = {
@@ -42,19 +42,19 @@ const PREDATOR_PREY_MAP = {
     'ELEPHANT':  ['LION', 'BEAR', 'CROCODILE', 'FOX'],
     'LION':      ['FOX', 'MOUSE'],
     'BEAR':      ['FOX', 'SEAL', 'BIG_FISH', 'MOUSE'],
-    'CROCODILE': ['FOX', 'BIG_FISH', 'SMALL_FISH', 'HEDGEHOG', 'MOUSE', 'MOSQUITO'],
+    'CROCODILE': ['FOX', 'BIG_FISH', 'SMALL_FISH', 'MOUSE', 'MOSQUITO'],
     'FOX':       ['HEDGEHOG', 'MOUSE'],
     'SEAL':      ['BIG_FISH', 'SMALL_FISH', 'MOUSE'],
     'BIG_FISH':  ['SMALL_FISH'],
     'SMALL_FISH':['MOSQUITO'],
     'HEDGEHOG':  ['MOUSE', 'MOSQUITO'],
     'MOUSE':     ['ELEPHANT', 'MOSQUITO'],
-    'MOSQUITO':  [], 
+    'MOSQUITO':  ['ELEPHANT'], 
     'CHAMELEON': []
 };
 
 // ==========================================
-// 2. 核心邏輯
+// 2. 核心邏輯 (保持不變)
 // ==========================================
 
 function createDeck(config) {
@@ -104,7 +104,9 @@ function resolveHandType(cards) {
 
         if (mosquitoes.length > 0) {
             if (firstType !== 'ELEPHANT') return { valid: false, msg: "蚊子只能配合大象" };
-            if (mosquitoes.length > others.length) return { valid: false, msg: "蚊子數量不能超過大象" };
+            if (mosquitoes.length > (others.length + chameleons.length)) {
+                return { valid: false, msg: "蚊子數量不能超過大象(含變色龍)總數" };
+            }
         }
     }
 
@@ -187,34 +189,83 @@ function checkGameOver(room) {
 
 const rooms = {};
 
+// 處理玩家真正移除的邏輯
+// [修正] 處理玩家離開/斷線的邏輯
+function handlePlayerRemove(socketId, roomId) {
+    const room = rooms[roomId];
+    if (!room) return;
+
+    const playerIndex = room.players.findIndex(p => p.id === socketId);
+    if (playerIndex === -1) return;
+    
+    // 記錄離開的人是否在遊戲中
+    const wasInGame = room.players[playerIndex].inGame;
+    
+    // 移除玩家 (陣列會自動遞補，原本的 players[1] 會變成 players[0] 即新房主)
+    room.players.splice(playerIndex, 1);
+
+    if (room.players.length === 0) {
+        delete rooms[roomId];
+        io.emit('room_list_update', getPublicRoomList());
+        return;
+    }
+
+    // 判斷房間狀態
+    if (room.status === 'WAITING') {
+        room.players.forEach(p => p.isReady = false);
+    } 
+    // [重點修正] 如果是「進行中」或「已結束」，只要有人離開，都要處理順位並廣播
+    else if ((room.status === 'PLAYING' || room.status === 'FINISHED') && wasInGame) {
+        
+        // 如果輪到的那個人剛好跑了，或者順位因為移除而跑掉，修正 turnIndex
+        if (room.turnIndex >= room.players.length) {
+            room.turnIndex = 0;
+        }
+        
+        // 檢查是否因為人跑光而結束
+        if (checkGameOver(room)) {
+            broadcastGameState(room);
+        } else {
+            // 如果是遊戲中，且輪到離開的人，要換下一位
+            if (room.status === 'PLAYING') {
+                // 這裡簡化處理：如果輪到的人不在了，直接跳下一個有牌的人
+                // 因為上面已經移除了玩家，turnIndex 現在指向的是原本的「下一家」
+                // 我們只需要確認這個人有牌，沒有就 nextTurn
+                if (room.players[room.turnIndex].hand.length === 0) {
+                     nextTurn(room);
+                }
+            }
+            broadcastGameState(room);
+        }
+    }
+
+    // 發送最新的房間資訊 (這會更新前端的 isHost 變數)
+    io.to(roomId).emit('update_room', {
+        players: room.players.map(p => ({ id: p.id, name: p.name, isReady: p.isReady })),
+        status: room.status,
+        config: room.deckConfig
+    });
+    
+    io.emit('room_list_update', getPublicRoomList());
+}
+
 io.on('connection', (socket) => {
     socket.emit('room_list_update', getPublicRoomList());
 
+    // 踢人功能
     socket.on('kick_player', ({ roomId, targetId }) => {
         const room = rooms[roomId];
         if (!room) return;
-
-        if (room.players[0].id !== socket.id) {
-            socket.emit('error_message', "只有房主可以踢人！");
-            return;
-        }
-        if (targetId === socket.id) return;
-
-        const targetIndex = room.players.findIndex(p => p.id === targetId);
-        if (targetIndex !== -1) {
-            room.players.splice(targetIndex, 1);
-            io.to(targetId).emit('kicked_out');
-            io.to(roomId).emit('update_room', {
-                players: room.players.map(p => ({ id: p.id, name: p.name, isReady: p.isReady })),
-                status: room.status,
-                config: room.deckConfig
-            });
-            io.emit('room_list_update', getPublicRoomList());
-        }
+        if (room.players[0].id !== socket.id) return;
+        
+        io.to(targetId).emit('kicked_out');
+        // 踢人是強制立刻移除
+        handlePlayerRemove(targetId, roomId);
     });
 
     socket.on('join_room', ({ roomId, username, nickname }) => {
         socket.join(roomId);
+        socket.currentRoomId = roomId; // 綁定房間ID方便斷線查詢
         
         if (!rooms[roomId]) {
             rooms[roomId] = {
@@ -226,19 +277,36 @@ io.on('connection', (socket) => {
                 tableCards: null, 
                 turnIndex: 0,
                 passCount: 0,
-                winners: []
+                winners: [],
+                // [新增] 用來存斷線倒數計時器
+                disconnectTimers: {} 
             };
             io.emit('room_list_update', getPublicRoomList());
         }
 
         const room = rooms[roomId];
+        
+        // [修改] 檢查是否為「斷線重連」的玩家
         const existingPlayer = room.players.find(p => p.username === username);
 
         if (existingPlayer) {
+            // --- 這是重連回來的玩家 ---
+            console.log(`玩家 ${nickname} 重連成功`);
+            
+            // 1. 如果有刪除倒數，立刻取消！
+            if (room.disconnectTimers[existingPlayer.username]) {
+                clearTimeout(room.disconnectTimers[existingPlayer.username]);
+                delete room.disconnectTimers[existingPlayer.username];
+            }
+
+            // 2. 更新 Socket ID
             existingPlayer.id = socket.id;
-            existingPlayer.name = nickname; 
+            existingPlayer.name = nickname; // 更新暱稱(如果有的話)
+            
+            // 3. 發送手牌
             socket.emit('receive_hand', existingPlayer.hand);
         } else {
+            // --- 這是新加入的玩家 ---
             const isSpectator = (room.status === 'PLAYING' || room.status === 'FINISHED');
             room.players.push({ 
                 id: socket.id, 
@@ -262,12 +330,41 @@ io.on('connection', (socket) => {
         }
     });
 
+    // [修改] 主動離開房間 (按下按鈕) -> 不需要倒數，直接刪除
+    socket.on('leave_room', (roomId) => {
+        const room = rooms[roomId];
+        if(room) {
+             // 主動離開，也要清除可能的計時器(預防萬一)
+            const player = room.players.find(p => p.id === socket.id);
+            if (player && room.disconnectTimers[player.username]) {
+                clearTimeout(room.disconnectTimers[player.username]);
+                delete room.disconnectTimers[player.username];
+            }
+            handlePlayerRemove(socket.id, roomId);
+        }
+        
+        socket.leave(roomId);
+        socket.currentRoomId = null;
+        socket.emit('left_room_success');
+    });
+
     socket.on('player_ready', (roomId) => {
         const room = rooms[roomId];
         if (!room) return;
         const player = room.players.find(p => p.id === socket.id);
         if (player) player.isReady = !player.isReady;
         
+        io.to(roomId).emit('update_room', {
+            players: room.players.map(p => ({ id: p.id, name: p.name, isReady: p.isReady })),
+            status: room.status,
+            config: room.deckConfig
+        });
+    });
+
+    socket.on('update_settings', ({ roomId, config }) => {
+        const room = rooms[roomId];
+        if (!room || room.players[0].id !== socket.id) return;
+        room.deckConfig = config;
         io.to(roomId).emit('update_room', {
             players: room.players.map(p => ({ id: p.id, name: p.name, isReady: p.isReady })),
             status: room.status,
@@ -334,6 +431,12 @@ io.on('connection', (socket) => {
         room.passCount = 0;
         room.deck = [];
         
+        // 重置遊戲時，也要清空所有斷線計時器 (大家都得回來準備)
+        for (const user in room.disconnectTimers) {
+            clearTimeout(room.disconnectTimers[user]);
+        }
+        room.disconnectTimers = {};
+
         room.players.forEach(p => {
             p.hand = [];
             p.isReady = false;
@@ -398,7 +501,6 @@ io.on('connection', (socket) => {
         broadcastGameState(room);
     });
 
-    // [核心修正] PASS 邏輯
     socket.on('pass_turn', (roomId) => {
         const room = rooms[roomId];
         if (!room) return;
@@ -410,43 +512,32 @@ io.on('connection', (socket) => {
 
         room.passCount++;
         
-        // 1. 計算還有誰有牌
         const playersWithCards = room.players.filter(p => p.inGame && p.hand.length > 0).length;
-        
-        // 2. 判斷這一墩的擁有者(出牌者)狀態
         const ownerId = room.tableCards.ownerId;
         const owner = room.players.find(p => p.id === ownerId);
         
-        // 3. 計算門檻
-        // 如果 owner 還在且有牌，PASS門檻 = 有牌人數 - 1 (因為 owner 自己不用 pass)
-        // 如果 owner 已經沒牌(跑了)，PASS門檻 = 有牌人數 (所有剩下的人都要 pass)
         let passThreshold = playersWithCards;
         if (owner && owner.hand.length > 0) {
             passThreshold = playersWithCards - 1;
         }
         
-        // 防呆：門檻至少要 1 (除非只剩 1 人，那在 checkGameOver 就會結束)
         passThreshold = Math.max(1, passThreshold);
 
         if (room.passCount >= passThreshold) {
-            // --- 贏得此墩 ---
             const ownerIndex = room.players.findIndex(p => p.id === ownerId);
 
-            room.tableCards = null;
+            room.tableCards = null; 
             room.passCount = 0;
 
             if (owner && owner.hand.length > 0) {
-                // 原主還有牌，回給原主
                 room.turnIndex = ownerIndex;
                 io.to(roomId).emit('toast', `無人能擋！${owner.name} 繼續出牌`);
             } else {
-                // 原主沒牌(跑了)，順位給下家
                 room.turnIndex = ownerIndex;
-                nextTurn(room); // 找下一位有牌的人
+                nextTurn(room); 
                 io.to(roomId).emit('toast', `上一家已獲勝！順位延續`);
             }
         } else {
-            // 還沒贏，換下一位
             nextTurn(room);
         }
 
@@ -459,7 +550,32 @@ io.on('connection', (socket) => {
         broadcastGameState(room);
     });
 
-    socket.on('disconnect', () => { });
+    // [修改] 斷線處理：加入緩衝保護
+    socket.on('disconnect', () => {
+        const roomId = socket.currentRoomId;
+        const room = rooms[roomId];
+        
+        if (room) {
+            const player = room.players.find(p => p.id === socket.id);
+            if (!player) return;
+
+            // 如果遊戲正在進行，給予 30 秒的重連寬限期
+            if (room.status === 'PLAYING') {
+                console.log(`玩家 ${player.name} 斷線，保留資料 30 秒...`);
+                
+                // 設定一個計時器，30秒後如果還沒連回來，才真的刪除
+                room.disconnectTimers[player.username] = setTimeout(() => {
+                    console.log(`玩家 ${player.name} 重連逾時，移除。`);
+                    handlePlayerRemove(socket.id, roomId);
+                    delete room.disconnectTimers[player.username];
+                }, 30000); // 30秒
+
+            } else {
+                // 如果是大廳等待中，直接移除 (不用保留)
+                handlePlayerRemove(socket.id, roomId);
+            }
+        }
+    });
 });
 
 function broadcastGameState(room) {
@@ -474,7 +590,6 @@ function broadcastGameState(room) {
 
     const publicData = {
         tableCards: room.tableCards ? {
-            // [修正] 補上 type，前端才知道桌上是什麼動物
             type: room.tableCards.type, 
             emoji: ANIMALS[room.tableCards.type].emoji,
             count: room.tableCards.count,
