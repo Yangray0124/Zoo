@@ -547,17 +547,31 @@ function renderTable(tableInfo) {
         discardPile.classList.remove('hidden');
 
         const tableInfoDiv = document.getElementById('table-info');
+        // 這裡顯示文字描述，例如 "桌面: 2 張 (🐘)" -> 這部分維持顯示「變身後」的結果比較好辨識
         tableInfoDiv.innerText = `桌面: ${tableInfo.count} 張 (${tableInfo.emoji})`;
 
-        for (let i = 0; i < tableInfo.count; i++) {
-            const card = createCardElement({ type: tableInfo.type, id: `table-${i}` });
-            card.classList.add('animate-enter');
-            card.style.animationDelay = `${i * 0.1}s`;
-            tableDiv.appendChild(card);
+        // [修改重點] 改用 tableInfo.cards 來畫圖，確保顯示原始卡面
+        if (tableInfo.cards && tableInfo.cards.length > 0) {
+            tableInfo.cards.forEach((cardData, i) => {
+                // 使用 cardData.type (原始類型) 來生成卡片
+                const card = createCardElement({ type: cardData.type, id: `table-${i}` });
+                
+                // 加入動畫
+                card.classList.add('animate-enter');
+                card.style.animationDelay = `${i * 0.1}s`;
+                
+                tableDiv.appendChild(card);
+            });
+        } 
+        // (保險起見的備用方案，如果 server 沒傳 cards 就用舊邏輯)
+        else {
+            for (let i = 0; i < tableInfo.count; i++) {
+                const card = createCardElement({ type: tableInfo.type, id: `table-${i}` });
+                card.classList.add('animate-enter');
+                card.style.animationDelay = `${i * 0.1}s`;
+                tableDiv.appendChild(card);
+            }
         }
-    } else {
-        tableDiv.innerHTML = '<div class="empty-msg">等待出牌...</div>';
-        document.getElementById('table-info').innerText = '';
     }
 
     lastTableSignature = currentSignature;
