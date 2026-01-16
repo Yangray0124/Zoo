@@ -439,23 +439,44 @@ function applyHighlights() {
     let isChameleonPlayable = false;
     let isMosquitoPlayable = false;
 
+    // 計算蚊子總戰力 (本體 + 變色龍)
+    const mosquitoPower = mosquitoCount + chameleonCount;
+
     if (!currentTableInfo) {
+        // --- 先手 ---
         const hasNormalAnimal = Object.keys(counts).length > 0;
         if (hasNormalAnimal) {
             Object.keys(counts).forEach(t => playableTypes.add(t));
             isChameleonPlayable = true;
         }
-        if (mosquitoCount > 0) isMosquitoPlayable = true;
+        
+        // [修改] 只要有蚊子，蚊子和變色龍都可以出 (當作純蚊子打)
+        if (mosquitoCount > 0) {
+            isMosquitoPlayable = true;
+            if (chameleonCount > 0) isChameleonPlayable = true;
+        }
+        
+        // 如果有大象，蚊子當然也可以出
         if (counts['ELEPHANT']) isMosquitoPlayable = true;
 
     } else {
+        // --- 後手 ---
         const targetType = currentTableInfo.type;
         const targetCount = currentTableInfo.count;
 
-        if (targetType === 'ELEPHANT' && mosquitoCount >= targetCount) {
-            isMosquitoPlayable = true;
+        // A. 蚊子當主角
+        // 情況 1: 叮大象 (蚊子 >= 大象數量)
+        if (targetType === 'ELEPHANT' && mosquitoPower >= targetCount) {
+             isMosquitoPlayable = true;
+             if (chameleonCount > 0) isChameleonPlayable = true;
+        }
+        // 情況 2: 蚊子打蚊子 (同類 >= 對手 + 1)
+        if (targetType === 'MOSQUITO' && mosquitoPower >= targetCount + 1) {
+             isMosquitoPlayable = true;
+             if (chameleonCount > 0) isChameleonPlayable = true;
         }
 
+        // B. 檢查其他動物 ... (這部分保持不變)
         Object.keys(counts).forEach(myType => {
             const myRealCount = counts[myType];
             const powerWithChameleon = myRealCount + chameleonCount;
@@ -494,6 +515,7 @@ function applyHighlights() {
         });
     }
 
+    // ... (最終亮燈保持不變)
     currentHand.forEach(card => {
         let highlight = false;
         if (card.type === 'CHAMELEON') {

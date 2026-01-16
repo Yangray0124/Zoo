@@ -95,9 +95,13 @@ function resolveHandType(cards) {
     
     if (others.length === 0 && mosquitoes.length === 0) return { valid: false, msg: "變色龍無法單獨出牌" };
     if (others.length === 0) {
-        if (chameleons.length > 0) return { valid: false, msg: "蚊子不能配變色龍" };
+        // [修改] 這裡原本擋住了變色龍，現在改為允許
+        // 規則：如果只有 蚊子+變色龍，視為「純蚊子」組合
         effectiveType = 'MOSQUITO';
-    } else {
+        
+        // 註：因為這裡 effectiveType 是 MOSQUITO，所以後面不會進到「蚊子變大象」的判斷，
+        // 而是直接以「蚊子」的身分打出，這樣是符合規則的。
+    }else {
         const firstType = others[0].type;
         if (!others.every(c => c.type === firstType)) return { valid: false, msg: "不能混打不同動物" };
         effectiveType = firstType;
