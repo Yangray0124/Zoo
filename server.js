@@ -49,7 +49,7 @@ const PREDATOR_PREY_MAP = {
     'SMALL_FISH':['MOSQUITO'],
     'HEDGEHOG':  ['MOUSE', 'MOSQUITO'],
     'MOUSE':     ['ELEPHANT', 'MOSQUITO'],
-    'MOSQUITO':  ['ELEPHANT'], 
+    'MOSQUITO':  [], 
     'CHAMELEON': []
 };
 

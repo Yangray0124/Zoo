@@ -37,7 +37,7 @@ const PREDATOR_PREY_MAP = {
     'SMALL_FISH':['MOSQUITO'],
     'HEDGEHOG':  ['MOUSE', 'MOSQUITO'],
     'MOUSE':     ['ELEPHANT', 'MOSQUITO'],
-    'MOSQUITO':  ['ELEPHANT'], 
+    'MOSQUITO':  [], 
     'CHAMELEON': []
 };
 
@@ -464,19 +464,14 @@ function applyHighlights() {
         const targetType = currentTableInfo.type;
         const targetCount = currentTableInfo.count;
 
-        // A. 蚊子當主角
-        // 情況 1: 叮大象 (蚊子 >= 大象數量)
-        if (targetType === 'ELEPHANT' && mosquitoPower >= targetCount) {
-             isMosquitoPlayable = true;
-             if (chameleonCount > 0) isChameleonPlayable = true;
-        }
-        // 情況 2: 蚊子打蚊子 (同類 >= 對手 + 1)
+        // 情況 1: 蚊子打蚊子 (同類 >= 對手 + 1)
+        // 註：這裡已經移除了「蚊子打大象」的判斷
         if (targetType === 'MOSQUITO' && mosquitoPower >= targetCount + 1) {
              isMosquitoPlayable = true;
              if (chameleonCount > 0) isChameleonPlayable = true;
         }
 
-        // B. 檢查其他動物 ... (這部分保持不變)
+        // 情況 2: 檢查其他動物 (包含大象帶蚊子)
         Object.keys(counts).forEach(myType => {
             const myRealCount = counts[myType];
             const powerWithChameleon = myRealCount + chameleonCount;
@@ -501,6 +496,7 @@ function applyHighlights() {
                 isChameleonPlayable = true;
             }
 
+            // 大象的特殊規則：可以攜帶蚊子
             if (myType === 'ELEPHANT') {
                 let winWithMosquito = false;
                 if (isPredator && powerWithMosquito >= targetCount) winWithMosquito = true;
@@ -508,7 +504,7 @@ function applyHighlights() {
 
                 if (winWithMosquito) {
                     playableTypes.add(myType);
-                    isMosquitoPlayable = true;
+                    isMosquitoPlayable = true; // 蚊子作為乘客被點亮
                     if (chameleonCount > 0) isChameleonPlayable = true;
                 }
             }

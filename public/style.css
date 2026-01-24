@@ -56,15 +56,22 @@ input {
     width: 100%;
     padding: 12px;
     border-radius: 8px;
-    border: none;
+    
+    /* [修改] 原本是 border: none; 改成下面這樣： */
+    border: 2px solid transparent; /* 先佔位，避免聚焦時跳動 */
+    
     background: rgba(0,0,0,0.3);
     color: white;
     font-size: 1em;
     text-align: center;
     outline: none;
     box-sizing: border-box;
+    transition: border-color 0.2s, background 0.2s; /* 加個過渡動畫更順滑 */
 }
-input:focus { background: rgba(0,0,0,0.5); border: 2px solid var(--table-color); }
+input:focus { 
+    background: rgba(0,0,0,0.5); 
+    border-color: var(--table-color); /* 只要改顏色就好 */
+}
 
 /* --- 按鈕 --- */
 button {
@@ -299,6 +306,12 @@ button:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
     background: transparent; border: none; color: #f1c40f; font-weight: bold;
     text-align: center; cursor: default; padding: 0; margin-top: 8px; opacity: 1;
     -webkit-text-fill-color: #f1c40f;
+}
+.setting-item .emoji-img {
+    width: 1.5em;       /* 原本是 2em，這裡改小一點 */
+    height: 1.5em;
+    margin-bottom: 0;   /* 設定介面不需要下方留白 */
+    vertical-align: text-bottom; /* 讓圖片跟文字對齊 */
 }
 .setting-hint {
     grid-column: 1 / -1; text-align: center; color: #e74c3c; font-size: 0.9em;
